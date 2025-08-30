@@ -53,11 +53,11 @@ export interface IStorage {
     activeShifts: number;
   }>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
@@ -224,9 +224,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAttendance(attendanceData: Partial<Attendance>): Promise<Attendance> {
+    const data = {
+      ...attendanceData,
+      personnelId: attendanceData.personnelId!
+    };
     const [record] = await db
       .insert(attendance)
-      .values(attendanceData)
+      .values(data)
       .returning();
     return record;
   }

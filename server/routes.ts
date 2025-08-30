@@ -82,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         personnel = await storage.getPersonnelByBranch(branchId as string);
       } else {
         // Branch admins can only see their branch personnel
-        if (req.user.role === 'branch_admin' && req.user.branchId) {
+        if (req.user?.role === 'branch_admin' && req.user?.branchId) {
           personnel = await storage.getPersonnelByBranch(req.user.branchId);
         } else {
           personnel = await storage.getPersonnel();
@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Branch admins can only see their branch personnel
-      if (req.user.role === 'branch_admin' && req.user.branchId !== person.branchId) {
+      if (req.user?.role === 'branch_admin' && req.user?.branchId !== person.branchId) {
         return res.status(403).json({ message: "Bu personeli görme yetkiniz bulunmamaktadır" });
       }
 
@@ -119,8 +119,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertPersonnelSchema.parse(req.body);
       
       // Branch admins can only add to their branch
-      if (req.user.role === 'branch_admin') {
-        if (req.user.branchId !== validatedData.branchId) {
+      if (req.user?.role === 'branch_admin') {
+        if (req.user?.branchId !== validatedData.branchId) {
           return res.status(403).json({ message: "Başka şubeye personel ekleyemezsiniz" });
         }
       }
@@ -142,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Branch admins can only edit their branch personnel
-      if (req.user.role === 'branch_admin' && req.user.branchId !== existingPerson.branchId) {
+      if (req.user?.role === 'branch_admin' && req.user?.branchId !== existingPerson.branchId) {
         return res.status(403).json({ message: "Bu personeli düzenleme yetkiniz bulunmamaktadır" });
       }
 
@@ -161,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (branchId) {
         shifts = await storage.getShiftsByBranch(branchId as string);
-      } else if (req.user.role === 'branch_admin' && req.user.branchId) {
+      } else if (req.user?.role === 'branch_admin' && req.user?.branchId) {
         shifts = await storage.getShiftsByBranch(req.user.branchId);
       } else {
         shifts = await storage.getShifts();
@@ -178,8 +178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertShiftSchema.parse(req.body);
       
       // Branch admins can only add shifts to their branch
-      if (req.user.role === 'branch_admin') {
-        if (req.user.branchId !== validatedData.branchId) {
+      if (req.user?.role === 'branch_admin') {
+        if (req.user?.branchId !== validatedData.branchId) {
           return res.status(403).json({ message: "Başka şubeye vardiya ekleyemezsiniz" });
         }
       }
@@ -267,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updates: any = { status };
       if (status === 'approved' || status === 'rejected') {
-        updates.approvedBy = req.user.id;
+        updates.approvedBy = req.user?.id;
         updates.approvedAt = new Date();
       }
 

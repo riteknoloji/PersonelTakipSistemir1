@@ -80,7 +80,7 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
   });
 
   // Reset form when personnel or mode changes
-  useState(() => {
+  React.useEffect(() => {
     if (personnel && (mode === 'edit' || mode === 'view')) {
       form.reset({
         employeeNumber: personnel.employeeNumber,
