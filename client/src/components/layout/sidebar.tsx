@@ -48,6 +48,11 @@ const menuItems = [
     icon: Calendar,
   },
   {
+    name: "Takvim",
+    href: "/calendar",
+    icon: Calendar,
+  },
+  {
     name: "Devam Takibi",
     href: "/attendance",
     icon: UserCheck,

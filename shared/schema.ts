@@ -7,6 +7,7 @@ import { z } from "zod";
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["super_admin", "admin", "branch_admin"]);
 export const leaveTypeEnum = pgEnum("leave_type", ["yillik", "hafta_tatili", "resmi_tatil", "hastalik", "dogum", "babalik", "evlilik", "olum", "mazeret", "ucretsiz"]);
+export const documentTypeEnum = pgEnum("document_type", ["health_report", "criminal_record", "other"]);
 export const shiftTypeEnum = pgEnum("shift_type", ["sabah", "oglen", "aksam", "gece"]);
 
 // Users table
@@ -107,6 +108,50 @@ export const leaveRequests = pgTable("leave_requests", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Personnel Documents table
+export const personnelDocuments = pgTable("personnel_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personnelId: varchar("personnel_id").notNull(),
+  type: documentTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  fileName: text("file_name").notNull(),
+  filePath: text("file_path").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  isValid: boolean("is_valid").notNull().default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Personnel Financial Info table
+export const personnelFinancialInfo = pgTable("personnel_financial_info", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personnelId: varchar("personnel_id").notNull().unique(),
+  bankName: text("bank_name"),
+  iban: text("iban"),
+  accountNumber: text("account_number"),
+  taxNumber: text("tax_number"),
+  socialSecurityNumber: text("social_security_number"),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactPhone: text("emergency_contact_phone"),
+  emergencyContactRelation: text("emergency_contact_relation"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Personnel Education table
+export const personnelEducation = pgTable("personnel_education", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personnelId: varchar("personnel_id").notNull(),
+  educationLevel: text("education_level").notNull(), // ilkokul, ortaokul, lise, universite, yuksek_lisans, doktora
+  schoolName: text("school_name").notNull(),
+  department: text("department"),
+  graduationYear: integer("graduation_year"),
+  isCompleted: boolean("is_completed").notNull().default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`gen_random_uuid()`),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
   branch: one(branches, {
@@ -138,6 +183,9 @@ export const personnelRelations = relations(personnel, ({ one, many }) => ({
   shifts: many(personnelShifts),
   attendance: many(attendance),
   leaveRequests: many(leaveRequests),
+  documents: many(personnelDocuments),
+  financialInfo: one(personnelFinancialInfo),
+  education: many(personnelEducation),
 }));
 
 export const shiftsRelations = relations(shifts, ({ one, many }) => ({
@@ -174,6 +222,27 @@ export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
   approver: one(users, {
     fields: [leaveRequests.approvedBy],
     references: [users.id],
+  }),
+}));
+
+export const personnelDocumentsRelations = relations(personnelDocuments, ({ one }) => ({
+  personnel: one(personnel, {
+    fields: [personnelDocuments.personnelId],
+    references: [personnel.id],
+  }),
+}));
+
+export const personnelFinancialInfoRelations = relations(personnelFinancialInfo, ({ one }) => ({
+  personnel: one(personnel, {
+    fields: [personnelFinancialInfo.personnelId],
+    references: [personnel.id],
+  }),
+}));
+
+export const personnelEducationRelations = relations(personnelEducation, ({ one }) => ({
+  personnel: one(personnel, {
+    fields: [personnelEducation.personnelId],
+    references: [personnel.id],
   }),
 }));
 
@@ -222,3 +291,26 @@ export type InsertShift = z.infer<typeof insertShiftSchema>;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
 export type Attendance = typeof attendance.$inferSelect;
+
+export const insertPersonnelDocumentSchema = createInsertSchema(personnelDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPersonnelDocument = z.infer<typeof insertPersonnelDocumentSchema>;
+export type PersonnelDocument = typeof personnelDocuments.$inferSelect;
+
+export const insertPersonnelFinancialInfoSchema = createInsertSchema(personnelFinancialInfo).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPersonnelFinancialInfo = z.infer<typeof insertPersonnelFinancialInfoSchema>;
+export type PersonnelFinancialInfo = typeof personnelFinancialInfo.$inferSelect;
+
+export const insertPersonnelEducationSchema = createInsertSchema(personnelEducation).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPersonnelEducation = z.infer<typeof insertPersonnelEducationSchema>;
+export type PersonnelEducation = typeof personnelEducation.$inferSelect;

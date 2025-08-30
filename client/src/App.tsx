@@ -16,6 +16,7 @@ import AttendanceTracking from "@/pages/attendance-tracking";
 import QRControl from "@/pages/qr-control";
 import Reports from "@/pages/reports";
 import SystemSettings from "@/pages/system-settings";
+import CalendarPage from "@/pages/calendar";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <ProtectedRoute path="/qr-control" component={QRControl} />
       <ProtectedRoute path="/reports" component={Reports} />
       <ProtectedRoute path="/settings" component={SystemSettings} />
+      <ProtectedRoute path="/calendar" component={CalendarPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
