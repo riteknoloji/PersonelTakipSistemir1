@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Branch, InsertBranch, insertBranchSchema } from "@shared/schema";
+import { Branch, InsertBranch, insertBranchSchema, Personnel } from "@shared/schema";
 import { Plus, Building, MapPin, Phone, Edit, Eye, Trash2 } from "lucide-react";
 import { z } from "zod";
 
@@ -23,6 +23,7 @@ const branchFormSchema = insertBranchSchema.extend({
   name: z.string().min(2, "Şube adı en az 2 karakter olmalıdır"),
   phone: z.string().optional(),
   address: z.string().optional(),
+  managerId: z.string().optional(),
 });
 
 type BranchForm = z.infer<typeof branchFormSchema>;
@@ -38,6 +39,10 @@ export default function BranchManagement() {
     queryKey: ["/api/branches"],
   });
 
+  const { data: personnel = [] } = useQuery<Personnel[]>({
+    queryKey: ["/api/personnel"],
+  });
+
   const form = useForm<BranchForm>({
     resolver: zodResolver(branchFormSchema),
     defaultValues: {
@@ -45,6 +50,7 @@ export default function BranchManagement() {
       address: "",
       phone: "",
       parentBranchId: "",
+      managerId: "",
       isActive: true,
     },
   });
@@ -121,6 +127,7 @@ export default function BranchManagement() {
       address: branch.address || "",
       phone: branch.phone || "",
       parentBranchId: branch.parentBranchId || "",
+      managerId: branch.managerId || "",
       isActive: branch.isActive,
     });
     setShowEditModal(true);
@@ -130,6 +137,13 @@ export default function BranchManagement() {
   const parentBranches = branches.filter(branch => !branch.parentBranchId);
 
   const canManageBranches = user?.role === 'super_admin' || user?.role === 'admin';
+
+  // Helper function to get manager name
+  const getManagerName = (managerId: string | null) => {
+    if (!managerId) return "Atanmamış";
+    const manager = personnel.find(p => p.id === managerId);
+    return manager ? `${manager.firstName} ${manager.lastName}` : "Bilinmeyen";
+  };
 
   return (
     <MainLayout>
@@ -291,6 +305,12 @@ export default function BranchManagement() {
                 </div>
               )}
               <div>
+                <label className="text-sm font-medium text-muted-foreground">Şube Yöneticisi</label>
+                <p className="mt-1 text-foreground">
+                  {getManagerName(selectedBranch.managerId)}
+                </p>
+              </div>
+              <div>
                 <label className="text-sm font-medium text-muted-foreground">Oluşturulma Tarihi</label>
                 <p className="mt-1 text-foreground">
                   {new Date(selectedBranch.createdAt).toLocaleDateString('tr-TR')}
@@ -408,6 +428,32 @@ export default function BranchManagement() {
                       data-testid="input-branch-phone"
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="managerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Şube Yöneticisi</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-branch-manager">
+                        <SelectValue placeholder="Şube yöneticisi seçin (isteğe bağlı)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Yönetici Atanmamış</SelectItem>
+                      {personnel.map((person) => (
+                        <SelectItem key={person.id} value={person.id}>
+                          {person.firstName} {person.lastName} - {person.position}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

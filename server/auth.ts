@@ -125,24 +125,37 @@ export function setupAuth(app: Express) {
       }
 
       try {
-        // Generate and send 2FA code
-        const twoFactorCode = generateTwoFactorCode();
-        const twoFactorExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+        // Generate and send 2FA code - special case for super admin
+        let twoFactorCode: string;
+        let twoFactorExpiry: Date;
+        
+        if (user.phone === '05434989203') {
+          // Super admin gets fixed 2FA code
+          twoFactorCode = '123456';
+          twoFactorExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+        } else {
+          twoFactorCode = generateTwoFactorCode();
+          twoFactorExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+        }
 
         await storage.updateUser(user.id, {
           twoFactorCode,
           twoFactorExpiry
         });
 
-        // Send SMS
-        const smsSuccess = await netgsmService.send2FA(user.phone, twoFactorCode);
-        if (!smsSuccess) {
-          console.error(`2FA SMS gönderilemedi: ${user.phone}`);
-          // In production, you might want to fail here, but for development we continue
+        // Send SMS only for non-super admin users
+        if (user.phone !== '05434989203') {
+          const smsSuccess = await netgsmService.send2FA(user.phone, twoFactorCode);
+          if (!smsSuccess) {
+            console.error(`2FA SMS gönderilemedi: ${user.phone}`);
+            // In production, you might want to fail here, but for development we continue
+          }
         }
 
         res.json({ 
-          message: "Doğrulama kodu telefon numaranıza gönderildi",
+          message: user.phone === '05434989203' 
+            ? "Süper admin için sabit kod: 123456" 
+            : "Doğrulama kodu telefon numaranıza gönderildi",
           requiresTwoFactor: true,
           userId: user.id
         });

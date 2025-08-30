@@ -31,6 +31,7 @@ export const branches = pgTable("branches", {
   address: text("address"),
   phone: text("phone"),
   parentBranchId: varchar("parent_branch_id"),
+  managerId: varchar("manager_id"), // Personnel ID of the branch manager
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
@@ -118,6 +119,10 @@ export const branchesRelations = relations(branches, ({ one, many }) => ({
   parentBranch: one(branches, {
     fields: [branches.parentBranchId],
     references: [branches.id],
+  }),
+  manager: one(personnel, {
+    fields: [branches.managerId],
+    references: [personnel.id],
   }),
   subBranches: many(branches),
   personnel: many(personnel),
