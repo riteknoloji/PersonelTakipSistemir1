@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { DetailModal } from "@/components/modals/detail-modal";
+import { PersonnelModal } from "@/components/modals/personnel-modal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Personnel, InsertPersonnel, Branch } from "@shared/schema";
@@ -14,7 +14,8 @@ import { Plus, Search, Edit, Eye } from "lucide-react";
 export default function PersonnelManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'view' | 'edit' | 'add'>('view');
+  const [showModal, setShowModal] = useState(false);
   const { toast } = useToast();
 
   const { data: personnel = [], isLoading: personnelLoading } = useQuery<Personnel[]>({
@@ -25,43 +26,22 @@ export default function PersonnelManagement() {
     queryKey: ["/api/branches"],
   });
 
-  const createPersonnelMutation = useMutation({
-    mutationFn: async (data: InsertPersonnel) => {
-      const res = await apiRequest("POST", "/api/personnel", data);
-      return await res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/personnel"] });
-      setShowAddModal(false);
-      toast({
-        title: "Başarılı",
-        description: "Personel başarıyla eklendi",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Hata",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleAddPersonnel = () => {
-    // Mock personnel data for demo
-    const mockPersonnel: InsertPersonnel = {
-      employeeNumber: `EMP${Date.now()}`,
-      firstName: "Yeni",
-      lastName: "Personel",
-      phone: "05xxxxxxxxx",
-      nationalId: "11111111111",
-      position: "Çalışan",
-      branchId: branches[0]?.id || "",
-      startDate: new Date(),
-      isActive: true,
-    };
+    setSelectedPersonnel(null);
+    setModalMode('add');
+    setShowModal(true);
+  };
 
-    createPersonnelMutation.mutate(mockPersonnel);
+  const handleViewPersonnel = (person: Personnel) => {
+    setSelectedPersonnel(person);
+    setModalMode('view');
+    setShowModal(true);
+  };
+
+  const handleEditPersonnel = (person: Personnel) => {
+    setSelectedPersonnel(person);
+    setModalMode('edit');
+    setShowModal(true);
   };
 
   const filteredPersonnel = personnel.filter(p =>
@@ -75,7 +55,7 @@ export default function PersonnelManagement() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Personel Yönetimi</h1>
-          <Button onClick={() => setShowAddModal(true)} data-testid="button-add-personnel">
+          <Button onClick={handleAddPersonnel} data-testid="button-add-personnel">
             <Plus className="w-4 h-4 mr-2" />
             Yeni Personel
           </Button>
@@ -119,7 +99,7 @@ export default function PersonnelManagement() {
               <Card
                 key={person.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setSelectedPersonnel(person)}
+                onClick={() => handleViewPersonnel(person)}
                 data-testid={`card-personnel-${person.id}`}
               >
                 <CardContent className="p-6">
@@ -156,7 +136,7 @@ export default function PersonnelManagement() {
                         variant="outline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedPersonnel(person);
+                          handleViewPersonnel(person);
                         }}
                         data-testid={`button-view-${person.id}`}
                       >
@@ -168,7 +148,7 @@ export default function PersonnelManagement() {
                         variant="outline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Handle edit
+                          handleEditPersonnel(person);
                         }}
                         data-testid={`button-edit-${person.id}`}
                       >
@@ -184,97 +164,13 @@ export default function PersonnelManagement() {
         </div>
       </div>
 
-      {/* Personnel Detail Modal */}
-      <DetailModal
-        open={!!selectedPersonnel}
-        onOpenChange={(open) => !open && setSelectedPersonnel(null)}
-        title="Personel Detayları"
-      >
-        {selectedPersonnel && (
-          <div className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Ad Soyad</label>
-                <p className="mt-1 text-foreground">
-                  {selectedPersonnel.firstName} {selectedPersonnel.lastName}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Personel No</label>
-                <p className="mt-1 text-foreground">{selectedPersonnel.employeeNumber}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Pozisyon</label>
-                <p className="mt-1 text-foreground">{selectedPersonnel.position}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Departman</label>
-                <p className="mt-1 text-foreground">{selectedPersonnel.department || "Belirtilmemiş"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Telefon</label>
-                <p className="mt-1 text-foreground">{selectedPersonnel.phone}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">E-posta</label>
-                <p className="mt-1 text-foreground">{selectedPersonnel.email || "Belirtilmemiş"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">TC Kimlik No</label>
-                <p className="mt-1 text-foreground">{selectedPersonnel.nationalId}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">İşe Başlama</label>
-                <p className="mt-1 text-foreground">
-                  {new Date(selectedPersonnel.startDate).toLocaleDateString('tr-TR')}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex space-x-3">
-              <Button data-testid="button-edit-personnel">
-                Düzenle
-              </Button>
-              <Button variant="secondary" data-testid="button-view-attendance">
-                Devam Bilgileri
-              </Button>
-              <Button variant="secondary" data-testid="button-view-leaves">
-                İzin Bilgileri
-              </Button>
-            </div>
-          </div>
-        )}
-      </DetailModal>
-
-      {/* Add Personnel Modal */}
-      <DetailModal
-        open={showAddModal}
-        onOpenChange={setShowAddModal}
-        title="Yeni Personel Ekle"
-      >
-        <div className="space-y-4">
-          <p className="text-muted-foreground">
-            Gerçek uygulamada burada personel ekleme formu olacaktır.
-          </p>
-          <div className="flex space-x-3">
-            <Button 
-              onClick={handleAddPersonnel}
-              disabled={createPersonnelMutation.isPending}
-              data-testid="button-confirm-add-personnel"
-            >
-              {createPersonnelMutation.isPending ? "Ekleniyor..." : "Demo Personel Ekle"}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowAddModal(false)}
-              data-testid="button-cancel-add"
-            >
-              İptal
-            </Button>
-          </div>
-        </div>
-      </DetailModal>
+      {/* Personnel Modal */}
+      <PersonnelModal
+        personnel={selectedPersonnel}
+        open={showModal}
+        onOpenChange={setShowModal}
+        mode={modalMode}
+      />
     </MainLayout>
   );
 }

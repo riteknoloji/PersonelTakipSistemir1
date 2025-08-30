@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Dialog,
@@ -493,6 +494,7 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
                           type="email"
                           placeholder="ornek@email.com"
                           {...field}
+                          value={field.value || ""}
                           data-testid="input-personnel-email"
                         />
                       </FormControl>
@@ -529,6 +531,7 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
                         <Input
                           placeholder="Departman"
                           {...field}
+                          value={field.value || ""}
                           data-testid="input-personnel-department"
                         />
                       </FormControl>
