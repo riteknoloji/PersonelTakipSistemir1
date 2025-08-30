@@ -46,10 +46,10 @@ const HOLIDAYS = {
   "2025-06-09": "Kurban Bayramı 4. Gün",
 };
 
-// Dini günler (kandiller ve özel günler - resmi tatil değil)
+// Dini günler (kandiller ve özel günler - resmi tatil değil) - Diyanet'ten doğru tarihler
 const RELIGIOUS_DAYS = {
   "2025-01-01": "Üç Ayların Başlangıcı",
-  "2025-01-02": "Regaib Kandili",
+  "2025-01-02": "Regaib Kandili", 
   "2025-01-26": "Mirac Kandili",
   "2025-02-13": "Berat Kandili",
   "2025-03-01": "Ramazan Başlangıcı",
@@ -59,12 +59,12 @@ const RELIGIOUS_DAYS = {
   "2025-06-26": "Hicri Yılbaşı",
   "2025-07-05": "Aşure Günü",
   "2025-09-03": "Mevlid Kandili",
-  "2025-12-21": "Üç Ayların Başlangıcı",
-  "2025-12-25": "Regaib Kandili",
+  "2025-12-21": "Üç Ayların Başlangıcı (1447)",
+  "2025-12-25": "Regaib Kandili (1447)",
 };
 
-// Özel günler (yönetici tarafından işaretlenen)
-const SPECIAL_DAYS = {
+// Özel günler - Dinamik olarak yönetilecek
+let SPECIAL_DAYS: { [key: string]: string } = {
   "2025-09-15": "Şirket Kuruluş Yıldönümü",
   "2025-12-31": "Yılsonu Toplantısı",
 };
@@ -239,6 +239,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAddSpecialDay, setShowAddSpecialDay] = useState(false);
   const [addSpecialDayDate, setAddSpecialDayDate] = useState<string>("");
+  const [, forceUpdate] = useState({});
   const { toast } = useToast();
 
   const form = useForm<SpecialDayForm>({
@@ -250,6 +251,9 @@ export default function CalendarPage() {
       type: "other",
     },
   });
+
+  // Sayfayı yeniden render etmek için
+  const triggerRerender = () => forceUpdate({});
 
   // Takvim için günleri oluştur
   const generateCalendarDays = () => {
@@ -456,14 +460,17 @@ export default function CalendarPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => {
-              // Bu gerçek uygulamada API'ye kaydedilir
-              // Şimdilik sadece SPECIAL_DAYS objesine ekleyeceğiz (demo için)
+              // Özel günü SPECIAL_DAYS objesine ekle ve takvimi güncelle
+              SPECIAL_DAYS[data.date] = data.title;
+              
               toast({
                 title: "Başarılı",
-                description: `${data.title} özel günü eklendi`,
+                description: `${data.title} özel günü ${new Date(data.date).toLocaleDateString('tr-TR')} tarihine eklendi`,
               });
+              
               setShowAddSpecialDay(false);
               form.reset();
+              triggerRerender(); // Takvimi yeniden render et
             })} className="space-y-4">
               <FormField
                 control={form.control}

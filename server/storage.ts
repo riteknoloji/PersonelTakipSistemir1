@@ -24,6 +24,7 @@ export interface IStorage {
   getPersonnel(): Promise<Personnel[]>;
   getPersonnelByBranch(branchId: string): Promise<Personnel[]>;
   getPersonnelById(id: string): Promise<Personnel | undefined>;
+  getPersonnelByPhone(phone: string): Promise<Personnel | undefined>;
   createPersonnel(personnel: InsertPersonnel): Promise<Personnel>;
   updatePersonnel(id: string, updates: Partial<Personnel>): Promise<Personnel | undefined>;
   searchPersonnel(query: string): Promise<Personnel[]>;
@@ -71,6 +72,39 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+    // Sistem başlatılırken admin personelini ekle
+    this.initializeAdminPersonnel();
+  }
+
+  async initializeAdminPersonnel() {
+    try {
+      // Admin personeli zaten var mı kontrol et
+      const existingAdmin = await this.getPersonnelByPhone("05434989203");
+      if (!existingAdmin) {
+        // Admin personeli ekle
+        const adminPersonnel = {
+          employeeNumber: "ADM001",
+          firstName: "Admin",
+          lastName: "Kullanıcı",
+          phone: "05434989203",
+          email: "admin@company.com",
+          nationalId: "12345678901",
+          position: "Sistem Yöneticisi",
+          department: "Bilgi İşlem",
+          branchId: "branch-001", // Ana şube
+          startDate: new Date(),
+          salary: 50000,
+          isActive: true,
+        };
+        
+        await this.createPersonnel(adminPersonnel);
+        console.log("Admin personeli başarıyla eklendi:", adminPersonnel.firstName, adminPersonnel.lastName);
+      } else {
+        console.log("Admin personeli zaten mevcut");
+      }
+    } catch (error) {
+      console.error("Admin personeli eklenirken hata:", error);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -139,6 +173,11 @@ export class DatabaseStorage implements IStorage {
 
   async getPersonnelById(id: string): Promise<Personnel | undefined> {
     const [person] = await db.select().from(personnel).where(eq(personnel.id, id));
+    return person || undefined;
+  }
+
+  async getPersonnelByPhone(phone: string): Promise<Personnel | undefined> {
+    const [person] = await db.select().from(personnel).where(eq(personnel.phone, phone));
     return person || undefined;
   }
 

@@ -38,7 +38,7 @@ const HOLIDAYS = {
 
 const RELIGIOUS_DAYS = {
   "2025-01-01": "Üç Ayların Başlangıcı",
-  "2025-01-02": "Regaib Kandili",
+  "2025-01-02": "Regaib Kandili", 
   "2025-01-26": "Mirac Kandili",
   "2025-02-13": "Berat Kandili",
   "2025-03-01": "Ramazan Başlangıcı",
@@ -48,8 +48,8 @@ const RELIGIOUS_DAYS = {
   "2025-06-26": "Hicri Yılbaşı",
   "2025-07-05": "Aşure Günü",
   "2025-09-03": "Mevlid Kandili",
-  "2025-12-21": "Üç Ayların Başlangıcı",
-  "2025-12-25": "Regaib Kandili",
+  "2025-12-21": "Üç Ayların Başlangıcı (1447)",
+  "2025-12-25": "Regaib Kandili (1447)",
 };
 
 const SPECIAL_DAYS = {

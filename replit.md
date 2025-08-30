@@ -8,6 +8,14 @@ This is a comprehensive personnel management and tracking system designed for Tu
 
 Preferred communication style: Simple, everyday language.
 
+## System Admin Credentials
+
+**Phone**: 05434989203  
+**Password**: ADMİN123  
+**2FA Code**: 123456  
+
+These credentials have been saved for system access and will be used for admin personnel creation.
+
 ## System Architecture
 
 ### Frontend Architecture
