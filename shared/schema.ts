@@ -152,6 +152,19 @@ export const personnelEducation = pgTable("personnel_education", {
   createdAt: timestamp("created_at").notNull().default(sql`gen_random_uuid()`),
 });
 
+// Personnel Leave Balances table
+export const personnelLeaveBalances = pgTable("personnel_leave_balances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personnelId: varchar("personnel_id").notNull(),
+  leaveType: leaveTypeEnum("leave_type").notNull(),
+  totalDays: integer("total_days").notNull().default(0),
+  usedDays: integer("used_days").notNull().default(0),
+  remainingDays: integer("remaining_days").notNull().default(0),
+  year: integer("year").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
   branch: one(branches, {
@@ -186,6 +199,7 @@ export const personnelRelations = relations(personnel, ({ one, many }) => ({
   documents: many(personnelDocuments),
   financialInfo: one(personnelFinancialInfo),
   education: many(personnelEducation),
+  leaveBalances: many(personnelLeaveBalances),
 }));
 
 export const shiftsRelations = relations(shifts, ({ one, many }) => ({
@@ -242,6 +256,13 @@ export const personnelFinancialInfoRelations = relations(personnelFinancialInfo,
 export const personnelEducationRelations = relations(personnelEducation, ({ one }) => ({
   personnel: one(personnel, {
     fields: [personnelEducation.personnelId],
+    references: [personnel.id],
+  }),
+}));
+
+export const personnelLeaveBalancesRelations = relations(personnelLeaveBalances, ({ one }) => ({
+  personnel: one(personnel, {
+    fields: [personnelLeaveBalances.personnelId],
     references: [personnel.id],
   }),
 }));
@@ -314,3 +335,11 @@ export const insertPersonnelEducationSchema = createInsertSchema(personnelEducat
 });
 export type InsertPersonnelEducation = z.infer<typeof insertPersonnelEducationSchema>;
 export type PersonnelEducation = typeof personnelEducation.$inferSelect;
+
+export const insertPersonnelLeaveBalanceSchema = createInsertSchema(personnelLeaveBalances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPersonnelLeaveBalance = z.infer<typeof insertPersonnelLeaveBalanceSchema>;
+export type PersonnelLeaveBalance = typeof personnelLeaveBalances.$inferSelect;

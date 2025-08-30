@@ -1,4 +1,4 @@
-import { users, branches, personnel, shifts, attendance, leaveRequests, personnelShifts, type User, type InsertUser, type Branch, type InsertBranch, type Personnel, type InsertPersonnel, type Shift, type InsertShift, type LeaveRequest, type InsertLeaveRequest, type Attendance } from "@shared/schema";
+import { users, branches, personnel, shifts, attendance, leaveRequests, personnelShifts, personnelLeaveBalances, type User, type InsertUser, type Branch, type InsertBranch, type Personnel, type InsertPersonnel, type Shift, type InsertShift, type LeaveRequest, type InsertLeaveRequest, type Attendance, type PersonnelLeaveBalance, type InsertPersonnelLeaveBalance } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, like, gte, lte } from "drizzle-orm";
 import session from "express-session";
@@ -48,6 +48,11 @@ export interface IStorage {
   getLeaveRequestsByPersonnel(personnelId: string): Promise<LeaveRequest[]>;
   createLeaveRequest(leaveRequest: InsertLeaveRequest): Promise<LeaveRequest>;
   updateLeaveRequest(id: string, updates: Partial<LeaveRequest>): Promise<LeaveRequest | undefined>;
+  
+  // Personnel Leave Balances
+  getPersonnelLeaveBalances(personnelId: string, year: number): Promise<PersonnelLeaveBalance[]>;
+  createOrUpdatePersonnelLeaveBalance(balance: InsertPersonnelLeaveBalance): Promise<PersonnelLeaveBalance>;
+  updatePersonnelLeaveBalance(id: string, updates: Partial<PersonnelLeaveBalance>): Promise<PersonnelLeaveBalance | undefined>;
   
   // Stats
   getStats(): Promise<{
@@ -387,6 +392,95 @@ export class DatabaseStorage implements IStorage {
       onLeave: onLeaveResult.count,
       activeShifts: activeShiftsResult.count,
     };
+  }
+
+  async getSystemSettings(): Promise<any> {
+    // For now, we'll return default settings
+    // In production, you'd want to use a proper settings table
+    return null;
+  }
+
+  async updateSystemSettings(settings: any): Promise<any> {
+    // For now, we'll store settings in a simple file
+    // In production, you'd want to use a proper settings table
+    return settings;
+  }
+
+  // Personnel Leave Balances
+  async getPersonnelLeaveBalances(personnelId: string, year: number): Promise<PersonnelLeaveBalance[]> {
+    const balances = await db
+      .select()
+      .from(personnelLeaveBalances)
+      .where(
+        and(
+          eq(personnelLeaveBalances.personnelId, personnelId),
+          eq(personnelLeaveBalances.year, year)
+        )
+      )
+      .orderBy(asc(personnelLeaveBalances.leaveType));
+    return balances;
+  }
+
+  async createOrUpdatePersonnelLeaveBalance(balance: InsertPersonnelLeaveBalance): Promise<PersonnelLeaveBalance> {
+    // Check if balance already exists for this personnel, leave type, and year
+    const [existing] = await db
+      .select()
+      .from(personnelLeaveBalances)
+      .where(
+        and(
+          eq(personnelLeaveBalances.personnelId, balance.personnelId),
+          eq(personnelLeaveBalances.leaveType, balance.leaveType),
+          eq(personnelLeaveBalances.year, balance.year)
+        )
+      );
+
+    if (existing) {
+      // Update existing balance
+      const [updated] = await db
+        .update(personnelLeaveBalances)
+        .set({ 
+          ...balance, 
+          remainingDays: balance.totalDays - balance.usedDays,
+          updatedAt: new Date() 
+        })
+        .where(eq(personnelLeaveBalances.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new balance
+      const [newBalance] = await db
+        .insert(personnelLeaveBalances)
+        .values({ 
+          ...balance, 
+          remainingDays: balance.totalDays - balance.usedDays 
+        })
+        .returning();
+      return newBalance;
+    }
+  }
+
+  async updatePersonnelLeaveBalance(id: string, updates: Partial<PersonnelLeaveBalance>): Promise<PersonnelLeaveBalance | undefined> {
+    const updateData = { 
+      ...updates, 
+      updatedAt: new Date() 
+    };
+    
+    // Recalculate remaining days if total or used days are updated
+    if (updates.totalDays !== undefined || updates.usedDays !== undefined) {
+      const [current] = await db.select().from(personnelLeaveBalances).where(eq(personnelLeaveBalances.id, id));
+      if (current) {
+        const totalDays = updates.totalDays ?? current.totalDays;
+        const usedDays = updates.usedDays ?? current.usedDays;
+        updateData.remainingDays = totalDays - usedDays;
+      }
+    }
+    
+    const [balance] = await db
+      .update(personnelLeaveBalances)
+      .set(updateData)
+      .where(eq(personnelLeaveBalances.id, id))
+      .returning();
+    return balance || undefined;
   }
 }
 

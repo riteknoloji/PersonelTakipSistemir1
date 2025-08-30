@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import MainLayout from "@/components/layout/main-layout";
-import type { LeaveRequest, Personnel, InsertLeaveRequest, insertLeaveRequestSchema } from "@shared/schema";
+import type { LeaveRequest, Personnel, InsertLeaveRequest, insertLeaveRequestSchema, PersonnelLeaveBalance } from "@shared/schema";
 import { z } from "zod";
 
 // Diyanet'ten çekilen dini günler ve resmi tatiller
@@ -306,6 +306,15 @@ export default function LeaveManagement() {
     queryKey: ["/api/personnel"],
   });
 
+  // Get leave balances for selected personnel
+  const selectedPersonnelId = form.watch("personnelId");
+  const currentYear = new Date().getFullYear();
+  
+  const { data: leaveBalances = [] } = useQuery<PersonnelLeaveBalance[]>({
+    queryKey: ["/api/personnel", selectedPersonnelId, "leave-balances", { year: currentYear }],
+    enabled: !!selectedPersonnelId,
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const res = await apiRequest("PUT", `/api/leave-requests/${id}`, { status });
@@ -357,6 +366,39 @@ export default function LeaveManagement() {
       endDate: new Date(data.endDate),
     };
     createLeaveRequestMutation.mutate(leaveData);
+  };
+
+  // Calculate leave days based on Turkish labor law
+  const calculateLeaveEntitlement = (person: Personnel) => {
+    if (!person.startDate) return { yillik: 0 };
+    
+    const startDate = new Date(person.startDate);
+    const today = new Date();
+    const yearsWorked = (today.getTime() - startDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    
+    let yillikIzin = 0;
+    if (yearsWorked >= 1 && yearsWorked < 5) {
+      yillikIzin = 14; // 1-5 years: 14 days
+    } else if (yearsWorked >= 5 && yearsWorked < 15) {
+      yillikIzin = 20; // 5-15 years: 20 days
+    } else if (yearsWorked >= 15) {
+      yillikIzin = 26; // 15+ years: 26 days
+    }
+    
+    return {
+      yillik: yillikIzin,
+      babalik: 5, // Fixed 5 days
+      evlilik: 3, // Fixed 3 days
+      olum: 3, // Fixed 3 days
+      // Other leave types are unlimited or case-by-case
+    };
+  };
+
+  // Get selected personnel's leave balance for the selected leave type
+  const getSelectedLeaveBalance = () => {
+    const selectedType = form.watch("type");
+    const balance = leaveBalances.find(b => b.leaveType === selectedType);
+    return balance || null;
   };
 
   const filteredRequests = leaveRequests.filter((request) => {

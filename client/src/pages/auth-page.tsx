@@ -13,7 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
-import { Users, Building, Clock, Shield } from "lucide-react";
+import { Users, Building, Clock, Shield, Eye, EyeOff } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 const loginSchema = z.object({
@@ -29,6 +29,8 @@ export default function AuthPage() {
   const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string>("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
   // Fetch branches for registration
   const { data: branches = [] } = useQuery({
@@ -85,6 +87,25 @@ export default function AuthPage() {
     }
   };
 
+  const handleTwoFactorKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && twoFactorCode.length === 6) {
+      handleTwoFactorSubmit();
+    }
+  };
+
+  // Auto-submit when 2FA code is complete
+  const handleTwoFactorChange = (value: string) => {
+    setTwoFactorCode(value);
+    if (value.length === 6) {
+      setTimeout(() => {
+        verify2FAMutation.mutate({
+          userId: pendingUserId,
+          code: value,
+        });
+      }, 100);
+    }
+  };
+
   if (showTwoFactor) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -100,7 +121,8 @@ export default function AuthPage() {
               <InputOTP
                 maxLength={6}
                 value={twoFactorCode}
-                onChange={setTwoFactorCode}
+                onChange={handleTwoFactorChange}
+                onKeyDown={handleTwoFactorKeyPress}
                 data-testid="input-2fa-code"
               >
                 <InputOTPGroup>
@@ -195,12 +217,28 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Şifre</FormLabel>
                             <FormControl>
-                              <Input
-                                type="password"
-                                placeholder="Şifrenizi girin"
-                                {...field}
-                                data-testid="input-login-password"
-                              />
+                              <div className="relative">
+                                <Input
+                                  type={showPassword ? "text" : "password"}
+                                  placeholder="Şifrenizi girin"
+                                  {...field}
+                                  data-testid="input-login-password"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  data-testid="button-toggle-password"
+                                >
+                                  {showPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -272,12 +310,28 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Şifre</FormLabel>
                             <FormControl>
-                              <Input
-                                type="password"
-                                placeholder="Şifrenizi girin"
-                                {...field}
-                                data-testid="input-register-password"
-                              />
+                              <div className="relative">
+                                <Input
+                                  type={showRegisterPassword ? "text" : "password"}
+                                  placeholder="Şifrenizi girin"
+                                  {...field}
+                                  data-testid="input-register-password"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                  onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                                  data-testid="button-toggle-register-password"
+                                >
+                                  {showRegisterPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>

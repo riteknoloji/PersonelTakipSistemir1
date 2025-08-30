@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { insertPersonnelSchema, insertBranchSchema, insertShiftSchema, insertLeaveRequestSchema } from "@shared/schema";
+import { insertPersonnelSchema, insertBranchSchema, insertShiftSchema, insertLeaveRequestSchema, insertPersonnelLeaveBalanceSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -407,6 +407,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(settings);
     } catch (error) {
       res.status(500).json({ message: "Sistem ayarları güncellenirken hata oluştu" });
+    }
+  });
+
+  // Personnel Leave Balances
+  app.get("/api/personnel/:id/leave-balances", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { year } = req.query;
+      
+      const currentYear = year ? parseInt(year as string) : new Date().getFullYear();
+      const balances = await storage.getPersonnelLeaveBalances(id, currentYear);
+      
+      res.json(balances);
+    } catch (error) {
+      res.status(500).json({ message: "İzin bakiyeleri yüklenirken hata oluştu" });
+    }
+  });
+
+  app.post("/api/personnel/:id/leave-balances", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertPersonnelLeaveBalanceSchema.parse({
+        ...req.body,
+        personnelId: id
+      });
+      
+      const balance = await storage.createOrUpdatePersonnelLeaveBalance(validatedData);
+      res.status(201).json(balance);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "İzin bakiyesi oluşturulurken hata oluştu" });
+    }
+  });
+
+  app.put("/api/personnel/:id/leave-balances/:balanceId", requireAuth, async (req, res) => {
+    try {
+      const { id, balanceId } = req.params;
+      const balance = await storage.updatePersonnelLeaveBalance(balanceId, req.body);
+      
+      if (!balance) {
+        return res.status(404).json({ message: "İzin bakiyesi bulunamadı" });
+      }
+      
+      res.json(balance);
+    } catch (error) {
+      res.status(500).json({ message: "İzin bakiyesi güncellenirken hata oluştu" });
     }
   });
 
