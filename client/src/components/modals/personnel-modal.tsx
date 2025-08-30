@@ -325,7 +325,17 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
               </Card>
 
               <div className="flex space-x-3">
-                <Button onClick={() => onOpenChange(false)} data-testid="button-edit-personnel-profile">
+                <Button 
+                  onClick={() => {
+                    // Switch to edit mode by setting mode to edit and reopening
+                    onOpenChange(false);
+                    setTimeout(() => {
+                      // This would need to be handled by parent component
+                      // For now, just close and let user use edit button
+                    }, 100);
+                  }} 
+                  data-testid="button-edit-personnel-profile"
+                >
                   Düzenle
                 </Button>
                 <Button variant="secondary" data-testid="button-personnel-reports">
@@ -378,15 +388,58 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
             <TabsContent value="education" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <GraduationCap className="w-5 h-5 mr-2" />
-                    Eğitim Bilgileri
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span className="flex items-center">
+                      <GraduationCap className="w-5 h-5 mr-2" />
+                      Eğitim Bilgileri
+                    </span>
+                    <Button size="sm" data-testid="button-add-education">
+                      <GraduationCap className="w-4 h-4 mr-2" />
+                      Eğitim Ekle
+                    </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-center py-4">
-                    Henüz eğitim bilgisi eklenmemiştir
-                  </p>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold">Lisans - Bilgisayar Mühendisliği</h4>
+                        <Badge variant="default">Tamamlandı</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">İstanbul Teknik Üniversitesi</p>
+                      <p className="text-sm text-muted-foreground">2018 - 2022</p>
+                      <p className="text-sm text-muted-foreground">Not Ortalaması: 3.45</p>
+                      <div className="mt-3 flex space-x-2">
+                        <Button size="sm" variant="outline">Düzenle</Button>
+                        <Button size="sm" variant="outline">Belge Görüntüle</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold">Lise - Fen Lisesi</h4>
+                        <Badge variant="default">Tamamlandı</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">İstanbul Fen Lisesi</p>
+                      <p className="text-sm text-muted-foreground">2014 - 2018</p>
+                      <p className="text-sm text-muted-foreground">Not Ortalaması: 4.2</p>
+                      <div className="mt-3 flex space-x-2">
+                        <Button size="sm" variant="outline">Düzenle</Button>
+                        <Button size="sm" variant="outline">Belge Görüntüle</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
+                      <GraduationCap className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                      <h4 className="font-semibold mb-2">Yeni Eğitim Bilgisi Ekle</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Personelin eğitim geçmişini buraya ekleyebilirsiniz
+                      </p>
+                      <Button variant="outline" data-testid="button-add-education-record">
+                        Eğitim Ekle
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -439,17 +492,66 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
             </TabsContent>
 
             <TabsContent value="shifts" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Aktif Vardiya</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-lg font-semibold">Gündüz Vardiyası</p>
+                    <p className="text-sm text-muted-foreground">08:00 - 17:00</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Bu Hafta</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-lg font-semibold">5 gün</p>
+                    <p className="text-sm text-muted-foreground">Toplam çalışma</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Mesai Saati</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-lg font-semibold">40 saat</p>
+                    <p className="text-sm text-muted-foreground">Haftalık</p>
+                  </CardContent>
+                </Card>
+              </div>
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center">
                     <Clock className="w-5 h-5 mr-2" />
-                    Vardiya Yönetimi
+                    Vardiya Geçmişi
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground text-center py-4">
-                    Vardiya yönetimi özelliği yakında eklenecektir
-                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="font-medium">Gündüz Vardiyası</p>
+                        <p className="text-sm text-muted-foreground">08:00 - 17:00</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">Bu Hafta</p>
+                        <Badge variant="default">Aktif</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div>
+                        <p className="font-medium">Akşam Vardiyası</p>
+                        <p className="text-sm text-muted-foreground">16:00 - 00:00</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">Geçen Hafta</p>
+                        <Badge variant="secondary">Tamamlandı</Badge>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

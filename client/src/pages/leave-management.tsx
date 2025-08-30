@@ -3,20 +3,43 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Plus, Search, Calendar, Clock, User, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import MainLayout from "@/components/layout/main-layout";
-import type { LeaveRequest, Personnel } from "@shared/schema";
+import type { LeaveRequest, Personnel, InsertLeaveRequest, insertLeaveRequestSchema } from "@shared/schema";
+import { z } from "zod";
 
 const LEAVE_TYPES = {
-  annual: "Yıllık İzin",
-  sick: "Hastalık İzni", 
-  maternity: "Doğum İzni",
-  paternity: "Babalık İzni",
-  other: "Diğer"
+  yillik: "Yıllık İzin",
+  hastalik: "Hastalık İzni", 
+  dogum: "Doğum İzni",
+  babalik: "Babalık İzni",
+  evlilik: "Evlilik İzni",
+  olum: "Ölüm İzni",
+  mazeret: "Mazeret İzni",
+  ucretsiz: "Ücretsiz İzin",
+  hafta_tatili: "Hafta Tatili",
+  resmi_tatil: "Resmi Tatil"
 };
+
+const leaveFormSchema = z.object({
+  personnelId: z.string().min(1, "Personel seçimi zorunludur"),
+  type: z.enum(["yillik", "hastalik", "dogum", "babalik", "evlilik", "olum", "mazeret", "ucretsiz", "hafta_tatili", "resmi_tatil"]),
+  startDate: z.string().min(1, "Başlangıç tarihi zorunludur"),
+  endDate: z.string().min(1, "Bitiş tarihi zorunludur"),
+  reason: z.string().optional(),
+});
+
+type LeaveForm = z.infer<typeof leaveFormSchema>;
 
 const LEAVE_STATUS = {
   pending: "Bekliyor",
@@ -32,7 +55,20 @@ const LEAVE_STATUS_COLORS = {
 
 export default function LeaveManagement() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const { toast } = useToast();
+
+  const form = useForm<LeaveForm>({
+    resolver: zodResolver(leaveFormSchema),
+    defaultValues: {
+      personnelId: "",
+      type: "yillik",
+      startDate: "",
+      endDate: "",
+      reason: "",
+    },
+  });
 
   const { data: leaveRequests = [], isLoading } = useQuery<LeaveRequest[]>({
     queryKey: ["/api/leave-requests"],
@@ -62,6 +98,38 @@ export default function LeaveManagement() {
       });
     },
   });
+
+  const createLeaveRequestMutation = useMutation({
+    mutationFn: async (data: InsertLeaveRequest) => {
+      const res = await apiRequest("POST", "/api/leave-requests", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leave-requests"] });
+      setShowAddModal(false);
+      form.reset();
+      toast({
+        title: "Başarılı",
+        description: "İzin talebi başarıyla oluşturuldu",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hata",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (data: LeaveForm) => {
+    const leaveData = {
+      ...data,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+    };
+    createLeaveRequestMutation.mutate(leaveData);
+  };
 
   const filteredRequests = leaveRequests.filter((request) => {
     const person = personnel.find(p => p.id === request.personnelId);
@@ -99,7 +167,7 @@ export default function LeaveManagement() {
             <h1 className="text-3xl font-bold tracking-tight">İzin Yönetimi</h1>
             <p className="text-muted-foreground">Personel izin taleplerini yönetin</p>
           </div>
-          <Button data-testid="button-add-leave">
+          <Button onClick={() => setShowAddModal(true)} data-testid="button-add-leave">
             <Plus className="mr-2 h-4 w-4" />
             Yeni İzin Talebi
           </Button>
@@ -186,7 +254,8 @@ export default function LeaveManagement() {
                     return (
                       <div 
                         key={request.id} 
-                        className="border rounded-lg p-4 space-y-4"
+                        className="border rounded-lg p-4 space-y-4 cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => setSelectedRequest(request)}
                         data-testid={`card-leave-request-${request.id}`}
                       >
                         <div className="flex items-center justify-between">
@@ -225,7 +294,9 @@ export default function LeaveManagement() {
                           </div>
                           <div>
                             <span className="font-medium">Gün Sayısı:</span>
-                            <p className="text-muted-foreground">{request.days} gün</p>
+                            <p className="text-muted-foreground">
+                              {Math.ceil((new Date(request.endDate).getTime() - new Date(request.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} gün
+                            </p>
                           </div>
                         </div>
 
@@ -266,6 +337,234 @@ export default function LeaveManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Leave Request Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-2xl" data-testid="modal-add-leave-request">
+          <DialogHeader>
+            <DialogTitle>Yeni İzin Talebi Oluştur</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="personnelId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Personel *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-leave-personnel">
+                          <SelectValue placeholder="Personel seçin" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {personnel.map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.firstName} {person.lastName} - {person.position}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>İzin Türü *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-leave-type">
+                          <SelectValue placeholder="İzin türü seçin" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(LEAVE_TYPES).map(([key, value]) => (
+                          <SelectItem key={key} value={key}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Başlangıç Tarihi *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          data-testid="input-leave-start-date"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bitiş Tarihi *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          data-testid="input-leave-end-date"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Açıklama</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="İzin talebi açıklaması (isteğe bağlı)"
+                        {...field}
+                        data-testid="textarea-leave-reason"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex space-x-3">
+                <Button
+                  type="submit"
+                  disabled={createLeaveRequestMutation.isPending}
+                  data-testid="button-submit-leave-request"
+                >
+                  {createLeaveRequestMutation.isPending ? "Kaydediliyor..." : "İzin Talebi Oluştur"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    form.reset();
+                  }}
+                  data-testid="button-cancel-leave-request"
+                >
+                  İptal
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave Request Detail Modal */}
+      <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+        <DialogContent className="max-w-2xl" data-testid="modal-leave-request-detail">
+          <DialogHeader>
+            <DialogTitle>İzin Talebi Detayları</DialogTitle>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Personel</Label>
+                  <p className="mt-1 text-foreground">
+                    {(() => {
+                      const person = personnel.find(p => p.id === selectedRequest.personnelId);
+                      return person ? `${person.firstName} ${person.lastName}` : "Bilinmeyen";
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">İzin Türü</Label>
+                  <p className="mt-1 text-foreground">
+                    {LEAVE_TYPES[selectedRequest.type as keyof typeof LEAVE_TYPES]}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Başlangıç Tarihi</Label>
+                  <p className="mt-1 text-foreground">
+                    {new Date(selectedRequest.startDate).toLocaleDateString('tr-TR')}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Bitiş Tarihi</Label>
+                  <p className="mt-1 text-foreground">
+                    {new Date(selectedRequest.endDate).toLocaleDateString('tr-TR')}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Gün Sayısı</Label>
+                  <p className="mt-1 text-foreground">
+                    {Math.ceil((new Date(selectedRequest.endDate).getTime() - new Date(selectedRequest.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} gün
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Durum</Label>
+                  <Badge 
+                    className={`mt-1 text-white ${LEAVE_STATUS_COLORS[selectedRequest.status as keyof typeof LEAVE_STATUS_COLORS]}`}
+                  >
+                    {LEAVE_STATUS[selectedRequest.status as keyof typeof LEAVE_STATUS]}
+                  </Badge>
+                </div>
+              </div>
+              
+              {selectedRequest.reason && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Açıklama</Label>
+                  <p className="mt-1 text-foreground">{selectedRequest.reason}</p>
+                </div>
+              )}
+
+              {selectedRequest.status === "pending" && (
+                <div className="flex space-x-3">
+                  <Button
+                    onClick={() => {
+                      updateStatusMutation.mutate({ id: selectedRequest.id, status: "approved" });
+                      setSelectedRequest(null);
+                    }}
+                    disabled={updateStatusMutation.isPending}
+                    data-testid="button-approve-leave-detail"
+                  >
+                    Onayla
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      updateStatusMutation.mutate({ id: selectedRequest.id, status: "rejected" });
+                      setSelectedRequest(null);
+                    }}
+                    disabled={updateStatusMutation.isPending}
+                    data-testid="button-reject-leave-detail"
+                  >
+                    Reddet
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

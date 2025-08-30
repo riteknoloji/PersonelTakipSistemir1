@@ -219,7 +219,7 @@ export default function CalendarPage() {
   const today = new Date().toDateString();
 
   const getDayClass = (day: Date) => {
-    const dateStr = day.toISOString().split('T')[0];
+    const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
     const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
     const isToday = day.toDateString() === today;
     const isHoliday = HOLIDAYS[dateStr as keyof typeof HOLIDAYS];
@@ -294,16 +294,16 @@ export default function CalendarPage() {
             {/* Takvim günleri */}
             <div className="grid grid-cols-7 gap-1">
               {days.map((day, index) => {
-                const dateStr = day.toISOString().split('T')[0];
-                const holiday = HOLIDAYS[dateStr as keyof typeof HOLIDAYS];
-                const specialDay = SPECIAL_DAYS[dateStr as keyof typeof SPECIAL_DAYS];
+                const dayDateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+                const holiday = HOLIDAYS[dayDateStr as keyof typeof HOLIDAYS];
+                const specialDay = SPECIAL_DAYS[dayDateStr as keyof typeof SPECIAL_DAYS];
                 
                 return (
                   <div
                     key={index}
                     className={getDayClass(day)}
-                    onClick={() => setSelectedDate(dateStr)}
-                    data-testid={`calendar-day-${dateStr}`}
+                    onClick={() => setSelectedDate(dayDateStr)}
+                    data-testid={`calendar-day-${dayDateStr}`}
                   >
                     <div className="text-center">
                       <div className="text-sm font-medium">{day.getDate()}</div>

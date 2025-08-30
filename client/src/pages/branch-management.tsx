@@ -103,14 +103,24 @@ export default function BranchManagement() {
   });
 
   const handleAddBranch = (data: BranchForm) => {
-    createBranchMutation.mutate(data);
+    const processedData = {
+      ...data,
+      parentBranchId: data.parentBranchId === "no-parent" ? null : data.parentBranchId,
+      managerId: data.managerId === "no-manager" ? null : data.managerId,
+    };
+    createBranchMutation.mutate(processedData);
   };
 
   const handleEditBranch = (data: BranchForm) => {
     if (selectedBranch) {
+      const processedData = {
+        ...data,
+        parentBranchId: data.parentBranchId === "no-parent" ? null : data.parentBranchId,
+        managerId: data.managerId === "no-manager" ? null : data.managerId,
+      };
       updateBranchMutation.mutate({
         id: selectedBranch.id,
-        data,
+        data: processedData,
       });
     }
   };
@@ -384,7 +394,7 @@ export default function BranchManagement() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Ana Şube Yok</SelectItem>
+                      <SelectItem value="no-parent">Ana Şube Yok</SelectItem>
                       {parentBranches.map((branch) => (
                         <SelectItem key={branch.id} value={branch.id}>
                           {branch.name}
@@ -446,7 +456,7 @@ export default function BranchManagement() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Yönetici Atanmamış</SelectItem>
+                      <SelectItem value="no-manager">Yönetici Atanmamış</SelectItem>
                       {personnel.map((person) => (
                         <SelectItem key={person.id} value={person.id}>
                           {person.firstName} {person.lastName} - {person.position}
