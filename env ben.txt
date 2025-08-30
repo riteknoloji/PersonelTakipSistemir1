@@ -8,3 +8,7 @@ PGPASSWORD="npg_s7t5blLYAxNd"
 
 
 14:12
+
+git add .
+git commit - m "gff"
+git push origin main
