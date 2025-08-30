@@ -1,7 +1,9 @@
-SESSION_SECRET="3BFMZOT9Bhs7P/VBVn3qw8KjrL7WFg050fs2UDk0CfUySyxIit4YAGw0ra7Dryxh3g2NGgQYd/avOhw7H/NFKw=="
-DATABASE_URL="postgresql://neondb_owner:npg_vc6WhLVNeo1m@ep-empty-wind-a5ilowi0.us-east-2.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://neondb_owner:npg_s7t5blLYAxNd@ep-billowing-violet-af6ur7kn.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require"
 PGDATABASE="neondb"
-PGHOST="ep-empty-wind-a5ilowi0.us-east-2.aws.neon.tech"
+PGHOST="ep-billowing-violet-af6ur7kn.c-2.us-west-2.aws.neon.tech"
 PGPORT="5432"
 PGUSER="neondb_owner"
-PGPASSWORD="npg_vc6WhLVNeo1m"
+PGPASSWORD="npg_s7t5blLYAxNd"
+
+
+13:32
