@@ -29,38 +29,42 @@ type SpecialDayForm = z.infer<typeof specialDaySchema>;
 
 // Türkiye'deki resmi tatiller ve dini günler (2025)
 const HOLIDAYS = {
-  // Resmi tatiller
+  // Resmi tatiller - 2025 Türkiye Resmi Tatil Günleri
   "2025-01-01": "Yılbaşı",
   "2025-04-23": "Ulusal Egemenlik ve Çocuk Bayramı",
   "2025-05-01": "İşçi Bayramı",
   "2025-05-19": "Atatürk'ü Anma, Gençlik ve Spor Bayramı",
+  "2025-07-15": "Demokrasi ve Milli Birlik Günü",
   "2025-08-30": "Zafer Bayramı",
+  "2025-10-28": "Cumhuriyet Bayramı Arifesi (Yarım Gün)",
   "2025-10-29": "Cumhuriyet Bayramı",
-  // Dini bayramlar (resmi tatil)
+  // Dini bayramlar (resmi tatil) - 2025 tarihlerine göre güncellenmiş
+  "2025-03-29": "Ramazan Bayramı Arifesi (Yarım Gün)",
   "2025-03-30": "Ramazan Bayramı 1. Gün",
   "2025-03-31": "Ramazan Bayramı 2. Gün",
   "2025-04-01": "Ramazan Bayramı 3. Gün",
+  "2025-06-05": "Kurban Bayramı Arifesi (Yarım Gün)",
   "2025-06-06": "Kurban Bayramı 1. Gün",
   "2025-06-07": "Kurban Bayramı 2. Gün",
   "2025-06-08": "Kurban Bayramı 3. Gün",
   "2025-06-09": "Kurban Bayramı 4. Gün",
 };
 
-// Dini günler (kandiller ve özel günler - resmi tatil değil) - Diyanet'ten doğru tarihler
+// Dini günler ve anma günleri (resmi tatil değil) - 2025 tarihlerine göre güncellenmiş
 const RELIGIOUS_DAYS = {
-  "2025-01-01": "Üç Ayların Başlangıcı",
-  "2025-01-02": "Regaib Kandili", 
-  "2025-01-26": "Mirac Kandili",
-  "2025-02-13": "Berat Kandili",
   "2025-03-01": "Ramazan Başlangıcı",
+  "2025-03-18": "Çanakkale Zaferi ve Şehitleri Anma Günü",
   "2025-03-26": "Kadir Gecesi",
-  "2025-03-29": "Arefe (Ramazan)",
-  "2025-06-05": "Arefe (Kurban)",
-  "2025-06-26": "Hicri Yılbaşı",
-  "2025-07-05": "Aşure Günü",
-  "2025-09-03": "Mevlid Kandili",
-  "2025-12-21": "Üç Ayların Başlangıcı (1447)",
-  "2025-12-25": "Regaib Kandili (1447)",
+  "2025-11-10": "Atatürk'ü Anma Günü",
+  // Kandil günleri - 2025 Hicri takvime göre
+  "2025-01-13": "Regaib Kandili",
+  "2025-02-08": "Mirac Kandili",
+  "2025-02-27": "Berat Kandili",
+  "2025-07-26": "Hicri Yılbaşı (1447)",
+  "2025-08-05": "Aşure Günü",
+  "2025-10-04": "Mevlid Kandili",
+  "2025-11-02": "Üç Ayların Başlangıcı (1447)",
+  "2025-12-02": "Regaib Kandili (1447)",
 };
 
 // Özel günler - Dinamik olarak yönetilecek

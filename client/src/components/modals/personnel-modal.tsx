@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Personnel, InsertPersonnel, insertPersonnelSchema, Branch, Attendance, LeaveRequest, PersonnelDocument, PersonnelFinancialInfo, PersonnelEducation } from "@shared/schema";
-import { User, Clock, Calendar, FileText, Phone, Mail, MapPin, Building, CreditCard, GraduationCap, Briefcase, UserCheck, CalendarDays, FolderOpen } from "lucide-react";
+import { User, Clock, Calendar, FileText, Phone, Mail, MapPin, Building, CreditCard, GraduationCap, Briefcase, UserCheck, CalendarDays, FolderOpen, Upload, Camera } from "lucide-react";
 import { z } from "zod";
 
 const personnelFormSchema = insertPersonnelSchema.extend({
@@ -45,6 +45,9 @@ interface PersonnelModalProps {
 
 export function PersonnelModal({ personnel, open, onOpenChange, mode }: PersonnelModalProps) {
   const [activeTab, setActiveTab] = useState("general");
+  const [isEditingTab, setIsEditingTab] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -62,6 +65,7 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
     enabled: !!personnel && mode === 'view',
   });
 
+  // Main form for add/edit modes
   const form = useForm<PersonnelForm>({
     resolver: zodResolver(personnelFormSchema),
     defaultValues: {
@@ -114,6 +118,109 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
       });
     }
   }, [personnel, mode, form, user]);
+
+  // Inline editing form for view mode tabs
+  const tabEditForm = useForm<PersonnelForm>({
+    resolver: zodResolver(personnelFormSchema),
+    defaultValues: personnel ? {
+      employeeNumber: personnel.employeeNumber,
+      firstName: personnel.firstName,
+      lastName: personnel.lastName,
+      phone: personnel.phone,
+      email: personnel.email || "",
+      nationalId: personnel.nationalId,
+      position: personnel.position,
+      department: personnel.department || "",
+      branchId: personnel.branchId || "",
+      startDate: personnel.startDate ? new Date(personnel.startDate) : new Date(),
+      salary: personnel.salary || 0,
+      isActive: personnel.isActive,
+      address: personnel.address || "",
+      birthDate: personnel.birthDate ? new Date(personnel.birthDate) : undefined,
+    } : {},
+  });
+
+  // Reset tab edit form when personnel changes
+  React.useEffect(() => {
+    if (personnel) {
+      tabEditForm.reset({
+        employeeNumber: personnel.employeeNumber,
+        firstName: personnel.firstName,
+        lastName: personnel.lastName,
+        phone: personnel.phone,
+        email: personnel.email || "",
+        nationalId: personnel.nationalId,
+        position: personnel.position,
+        department: personnel.department || "",
+        branchId: personnel.branchId || "",
+        startDate: personnel.startDate ? new Date(personnel.startDate) : new Date(),
+        salary: personnel.salary || 0,
+        isActive: personnel.isActive,
+        address: personnel.address || "",
+        birthDate: personnel.birthDate ? new Date(personnel.birthDate) : undefined,
+      });
+    }
+  }, [personnel, tabEditForm]);
+
+  // Tab editing mutation for saving tab data
+  const updateTabDataMutation = useMutation({
+    mutationFn: async (data: Partial<PersonnelForm>) => {
+      if (!personnel) throw new Error("No personnel selected");
+      const res = await apiRequest("PUT", `/api/personnel/${personnel.id}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Başarılı",
+        description: "Personel bilgileri güncellendi",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/personnel"] });
+      setIsEditingTab(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Güncelleme sırasında bir hata oluştu",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Photo upload mutation
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!personnel) throw new Error("No personnel selected");
+      const formData = new FormData();
+      formData.append('photo', file);
+      
+      const res = await fetch(`/api/personnel/${personnel.id}/photo`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!res.ok) {
+        throw new Error('Fotoğraf yükleme başarısız');
+      }
+      
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Başarılı",
+        description: "Profil fotoğrafı güncellendi",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/personnel"] });
+      setPhotoFile(null);
+      setPhotoPreview(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Hata",
+        description: error.message || "Fotoğraf yükleme sırasında bir hata oluştu",
+        variant: "destructive",
+      });
+    },
+  });
 
   const createPersonnelMutation = useMutation({
     mutationFn: async (data: InsertPersonnel) => {
@@ -188,6 +295,48 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
     }
   };
 
+  // Handle photo file selection
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Hata",
+          description: "Lütfen geçerli bir resim dosyası seçin",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Hata",
+          description: "Dosya boyutu 5MB'dan küçük olmalıdır",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setPhotoFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload photo
+  const handlePhotoUpload = () => {
+    if (photoFile) {
+      uploadPhotoMutation.mutate(photoFile);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="modal-personnel">
@@ -237,6 +386,72 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
             </TabsList>
 
             <TabsContent value="general" className="space-y-6">
+              {/* Profile Photo Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <Camera className="w-5 h-5 mr-2" />
+                    Profil Fotoğrafı
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center space-x-6">
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                      {photoPreview ? (
+                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : personnel?.profilePhotoUrl ? (
+                        <img src={personnel.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-12 h-12 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    {isEditingTab ? (
+                      <div className="space-y-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoChange}
+                          className="cursor-pointer"
+                          data-testid="input-profile-photo"
+                        />
+                        {photoFile && (
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              onClick={handlePhotoUpload}
+                              disabled={uploadPhotoMutation.isPending}
+                              data-testid="button-upload-photo"
+                            >
+                              {uploadPhotoMutation.isPending ? "Yükleniyor..." : "Fotoğrafı Yükle"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setPhotoFile(null);
+                                setPhotoPreview(null);
+                              }}
+                              data-testid="button-cancel-photo"
+                            >
+                              İptal
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        {personnel?.profilePhotoUrl 
+                          ? "Profil fotoğrafı mevcut"
+                          : "Profil fotoğrafı eklenmemiş"
+                        }
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="grid grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -246,26 +461,90 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Ad</label>
-                        <p className="mt-1 text-foreground">{personnel.firstName}</p>
+                    {isEditingTab ? (
+                      <Form {...tabEditForm}>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={tabEditForm.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Ad</FormLabel>
+                                <FormControl>
+                                  <Input {...field} data-testid="input-edit-firstName" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={tabEditForm.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Soyad</FormLabel>
+                                <FormControl>
+                                  <Input {...field} data-testid="input-edit-lastName" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={tabEditForm.control}
+                            name="nationalId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>TC Kimlik No</FormLabel>
+                                <FormControl>
+                                  <Input {...field} maxLength={11} data-testid="input-edit-nationalId" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={tabEditForm.control}
+                            name="birthDate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Doğum Tarihi</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="date"
+                                    value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                                    data-testid="input-edit-birthDate"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </Form>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Ad</label>
+                          <p className="mt-1 text-foreground">{personnel.firstName}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Soyad</label>
+                          <p className="mt-1 text-foreground">{personnel.lastName}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">TC Kimlik No</label>
+                          <p className="mt-1 text-foreground">{personnel.nationalId}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Doğum Tarihi</label>
+                          <p className="mt-1 text-foreground">
+                            {personnel.birthDate ? new Date(personnel.birthDate).toLocaleDateString('tr-TR') : "Belirtilmemiş"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Soyad</label>
-                        <p className="mt-1 text-foreground">{personnel.lastName}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">TC Kimlik No</label>
-                        <p className="mt-1 text-foreground">{personnel.nationalId}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Doğum Tarihi</label>
-                        <p className="mt-1 text-foreground">
-                          {personnel.birthDate ? new Date(personnel.birthDate).toLocaleDateString('tr-TR') : "Belirtilmemiş"}
-                        </p>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -324,23 +603,63 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
                 </CardContent>
               </Card>
 
-              <div className="flex space-x-3">
-                <Button 
-                  onClick={() => {
-                    // Switch to edit mode by setting mode to edit and reopening
-                    onOpenChange(false);
-                    setTimeout(() => {
-                      // This would need to be handled by parent component
-                      // For now, just close and let user use edit button
-                    }, 100);
-                  }} 
-                  data-testid="button-edit-personnel-profile"
-                >
-                  Düzenle
-                </Button>
-                <Button variant="secondary" data-testid="button-personnel-reports">
-                  Raporları Görüntüle
-                </Button>
+              <div className="flex justify-between items-center">
+                <div className="flex space-x-3">
+                  <Button variant="secondary" data-testid="button-personnel-reports">
+                    Raporları Görüntüle
+                  </Button>
+                </div>
+                <div className="flex space-x-2">
+                  {isEditingTab && (
+                    <>
+                      <Button 
+                        onClick={() => {
+                          const data = tabEditForm.getValues();
+                          updateTabDataMutation.mutate(data);
+                        }}
+                        disabled={updateTabDataMutation.isPending}
+                        data-testid="button-save-general-tab"
+                      >
+                        {updateTabDataMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingTab(false);
+                          // Reset form to original values
+                          if (personnel) {
+                            tabEditForm.reset({
+                              employeeNumber: personnel.employeeNumber,
+                              firstName: personnel.firstName,
+                              lastName: personnel.lastName,
+                              phone: personnel.phone,
+                              email: personnel.email || "",
+                              nationalId: personnel.nationalId,
+                              position: personnel.position,
+                              department: personnel.department || "",
+                              branchId: personnel.branchId || "",
+                              startDate: personnel.startDate ? new Date(personnel.startDate) : new Date(),
+                              salary: personnel.salary || 0,
+                              isActive: personnel.isActive,
+                              address: personnel.address || "",
+                              birthDate: personnel.birthDate ? new Date(personnel.birthDate) : undefined,
+                            });
+                          }
+                        }}
+                        data-testid="button-cancel-general-tab"
+                      >
+                        İptal
+                      </Button>
+                    </>
+                  )}
+                  <Button 
+                    onClick={() => setIsEditingTab(!isEditingTab)} 
+                    data-testid="button-edit-general-tab"
+                    variant={isEditingTab ? "secondary" : "default"}
+                  >
+                    {isEditingTab ? "Görüntüleme Moduna Geç" : "Düzenleme Moduna Geç"}
+                  </Button>
+                </div>
               </div>
             </TabsContent>
 

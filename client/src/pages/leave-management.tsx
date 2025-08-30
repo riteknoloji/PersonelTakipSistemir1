@@ -21,15 +21,21 @@ import { z } from "zod";
 
 // Diyanet'ten çekilen dini günler ve resmi tatiller
 const HOLIDAYS = {
+  // Resmi tatiller - 2025 Türkiye Resmi Tatil Günleri
   "2025-01-01": "Yılbaşı",
   "2025-04-23": "Ulusal Egemenlik ve Çocuk Bayramı",
   "2025-05-01": "İşçi Bayramı",
   "2025-05-19": "Atatürk'ü Anma, Gençlik ve Spor Bayramı",
+  "2025-07-15": "Demokrasi ve Milli Birlik Günü",
   "2025-08-30": "Zafer Bayramı",
+  "2025-10-28": "Cumhuriyet Bayramı Arifesi (Yarım Gün)",
   "2025-10-29": "Cumhuriyet Bayramı",
+  // Dini bayramlar (resmi tatil) - 2025 tarihlerine göre güncellenmiş
+  "2025-03-29": "Ramazan Bayramı Arifesi (Yarım Gün)",
   "2025-03-30": "Ramazan Bayramı 1. Gün",
   "2025-03-31": "Ramazan Bayramı 2. Gün",
   "2025-04-01": "Ramazan Bayramı 3. Gün",
+  "2025-06-05": "Kurban Bayramı Arifesi (Yarım Gün)",
   "2025-06-06": "Kurban Bayramı 1. Gün",
   "2025-06-07": "Kurban Bayramı 2. Gün",
   "2025-06-08": "Kurban Bayramı 3. Gün",

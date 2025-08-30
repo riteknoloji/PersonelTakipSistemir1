@@ -1,12 +1,43 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import express from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertPersonnelSchema, insertBranchSchema, insertShiftSchema, insertLeaveRequestSchema, insertPersonnelLeaveBalanceSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup multer for file uploads
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadDir = path.join(process.cwd(), 'uploads', 'photos');
+        fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+      }
+    }),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('Sadece resim dosyaları kabul edilir'));
+      }
+      cb(null, true);
+    }
+  });
+
   // Setup authentication routes
   setupAuth(app);
+
+  // Serve uploaded files
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Middleware to check authentication
   const requireAuth = (req: any, res: any, next: any) => {
@@ -161,6 +192,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(person);
     } catch (error) {
       res.status(500).json({ message: "Personel güncellenirken hata oluştu" });
+    }
+  });
+
+  // Photo upload route
+  app.post("/api/personnel/:id/photo", requireAuth, upload.single('photo'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const existingPerson = await storage.getPersonnelById(id);
+      
+      if (!existingPerson) {
+        return res.status(404).json({ message: "Personel bulunamadı" });
+      }
+
+      // Branch admins can only edit their branch personnel
+      if (req.user?.role === 'branch_admin' && req.user?.branchId !== existingPerson.branchId) {
+        return res.status(403).json({ message: "Bu personelin fotoğrafını değiştirme yetkiniz bulunmamaktadır" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Fotoğraf dosyası bulunamadı" });
+      }
+
+      // Generate photo URL
+      const photoUrl = `/uploads/photos/${req.file.filename}`;
+      
+      // Update personnel with photo URL
+      const person = await storage.updatePersonnel(id, { profilePhotoUrl: photoUrl });
+      
+      res.json({ 
+        message: "Profil fotoğrafı başarıyla güncellendi",
+        photoUrl: photoUrl,
+        personnel: person
+      });
+    } catch (error: any) {
+      console.error('Photo upload error:', error);
+      res.status(500).json({ message: error.message || "Fotoğraf yüklenirken hata oluştu" });
     }
   });
 
@@ -369,33 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/settings", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const settings = await storage.getSystemSettings();
-      res.json(settings || {
-        companyName: "",
-        companyAddress: "",
-        companyPhone: "",
-        companyEmail: "",
-        workHours: {
-          start: "09:00",
-          end: "18:00",
-          lunchBreak: 60,
-        },
-        notifications: {
-          emailEnabled: true,
-          smsEnabled: true,
-          lateArrivalAlert: true,
-          absenceAlert: true,
-        },
-        attendance: {
-          graceMinutes: 15,
-          autoClockOut: false,
-          requireLocationCheck: false,
-        },
-        backup: {
-          autoBackup: true,
-          backupFrequency: "daily",
-          retentionDays: 30,
-        },
-      });
+      res.json(settings);
     } catch (error) {
       res.status(500).json({ message: "Sistem ayarları yüklenirken hata oluştu" });
     }

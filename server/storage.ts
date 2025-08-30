@@ -330,7 +330,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select()
       .from(attendance)
       .where(sql`DATE(${attendance.date}) = ${date}`)
-      .orderBy(desc(attendance.checkInTime));
+      .orderBy(desc(attendance.checkIn));
   }
 
   async updateAttendance(id: string, updates: Partial<Attendance>): Promise<Attendance | undefined> {
@@ -342,15 +342,6 @@ export class DatabaseStorage implements IStorage {
     return updated || undefined;
   }
 
-  async getSystemSettings(): Promise<any> {
-    // Bu gelecekte ayrı bir tablo olabilir, şimdilik default değerler döndürüyoruz
-    return null;
-  }
-
-  async updateSystemSettings(settings: any): Promise<any> {
-    // Bu gelecekte ayrı bir tablo olabilir, şimdilik ayarları döndürüyoruz
-    return settings;
-  }
 
   async getStats(): Promise<{
     totalPersonnel: number;
@@ -395,13 +386,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSystemSettings(): Promise<any> {
-    // For now, we'll return default settings
-    // In production, you'd want to use a proper settings table
-    return null;
+    // Return optimized default settings to avoid UI flickering
+    return {
+      companyName: "Personel Takip Sistemi",
+      companyAddress: "İstanbul, Türkiye",
+      companyPhone: "+90 (212) 555-0123",
+      companyEmail: "info@pts.com.tr",
+      workHours: {
+        start: "09:00",
+        end: "18:00",
+        lunchBreak: 60,
+      },
+      notifications: {
+        emailEnabled: true,
+        smsEnabled: true,
+        lateArrivalAlert: true,
+        absenceAlert: true,
+      },
+      attendance: {
+        graceMinutes: 15,
+        autoClockOut: false,
+        requireLocationCheck: false,
+      },
+      backup: {
+        autoBackup: true,
+        backupFrequency: "daily",
+        retentionDays: 30,
+      },
+    };
   }
 
   async updateSystemSettings(settings: any): Promise<any> {
-    // For now, we'll store settings in a simple file
+    // For now, simply return the updated settings
     // In production, you'd want to use a proper settings table
     return settings;
   }
@@ -440,7 +456,7 @@ export class DatabaseStorage implements IStorage {
         .update(personnelLeaveBalances)
         .set({ 
           ...balance, 
-          remainingDays: balance.totalDays - balance.usedDays,
+          remainingDays: (balance.totalDays || 0) - (balance.usedDays || 0),
           updatedAt: new Date() 
         })
         .where(eq(personnelLeaveBalances.id, existing.id))
@@ -452,7 +468,7 @@ export class DatabaseStorage implements IStorage {
         .insert(personnelLeaveBalances)
         .values({ 
           ...balance, 
-          remainingDays: balance.totalDays - balance.usedDays 
+          remainingDays: (balance.totalDays || 0) - (balance.usedDays || 0) 
         })
         .returning();
       return newBalance;

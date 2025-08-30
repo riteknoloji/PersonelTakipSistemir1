@@ -54,6 +54,7 @@ export const personnel = pgTable("personnel", {
   branchId: varchar("branch_id").notNull(),
   startDate: timestamp("start_date").notNull(),
   salary: integer("salary"),
+  profilePhotoUrl: text("profile_photo_url"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),

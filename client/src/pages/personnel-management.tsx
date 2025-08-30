@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PersonnelModal } from "@/components/modals/personnel-modal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -75,93 +76,100 @@ export default function PersonnelManagement() {
           </div>
         </div>
 
-        {/* Personnel Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {personnelLoading ? (
-            // Loading skeletons
-            Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                    <div className="h-3 bg-muted rounded w-2/3" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : filteredPersonnel.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <p className="text-muted-foreground">Personel bulunamadı</p>
-            </div>
-          ) : (
-            filteredPersonnel.map((person) => (
-              <Card
-                key={person.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => handleViewPersonnel(person)}
-                data-testid={`card-personnel-${person.id}`}
-              >
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {person.firstName} {person.lastName}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {person.employeeNumber}
-                        </p>
-                      </div>
-                      <Badge variant={person.isActive ? "default" : "secondary"}>
-                        {person.isActive ? "Aktif" : "Pasif"}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <p className="text-sm">
-                        <span className="font-medium">Pozisyon:</span> {person.position}
-                      </p>
-                      <p className="text-sm">
-                        <span className="font-medium">Departman:</span> {person.department || "Belirtilmemiş"}
-                      </p>
-                      <p className="text-sm">
-                        <span className="font-medium">Telefon:</span> {person.phone}
-                      </p>
-                    </div>
-
-                    <div className="flex space-x-2 pt-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewPersonnel(person);
-                        }}
-                        data-testid={`button-view-${person.id}`}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Görüntüle
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditPersonnel(person);
-                        }}
-                        data-testid={`button-edit-${person.id}`}
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Düzenle
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+        {/* Personnel Table */}
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Personel Numarası</TableHead>
+                  <TableHead>Ad Soyad</TableHead>
+                  <TableHead>Pozisyon</TableHead>
+                  <TableHead>Departman</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Şube</TableHead>
+                  <TableHead>Durum</TableHead>
+                  <TableHead className="text-right">İşlemler</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {personnelLoading ? (
+                  // Loading skeletons
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-32 animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-24 animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-24 animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-16 animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredPersonnel.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12">
+                      <p className="text-muted-foreground">Personel bulunamadı</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPersonnel.map((person) => (
+                    <TableRow
+                      key={person.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleViewPersonnel(person)}
+                      data-testid={`row-personnel-${person.id}`}
+                    >
+                      <TableCell className="font-medium">{person.employeeNumber}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{person.firstName} {person.lastName}</div>
+                          <div className="text-sm text-muted-foreground">{person.email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{person.position}</TableCell>
+                      <TableCell>{person.department || "Belirtilmemiş"}</TableCell>
+                      <TableCell>{person.phone}</TableCell>
+                      <TableCell>{branches.find(b => b.id === person.branchId)?.name || "Belirtilmemiş"}</TableCell>
+                      <TableCell>
+                        <Badge variant={person.isActive ? "default" : "secondary"}>
+                          {person.isActive ? "Aktif" : "Pasif"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex space-x-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewPersonnel(person);
+                            }}
+                            data-testid={`button-view-${person.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditPersonnel(person);
+                            }}
+                            data-testid={`button-edit-${person.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Personnel Modal */}
