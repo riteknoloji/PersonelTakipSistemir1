@@ -11,6 +11,11 @@ import Dashboard from "@/pages/dashboard";
 import PersonnelManagement from "@/pages/personnel-management";
 import BranchManagement from "@/pages/branch-management";
 import ShiftManagement from "@/pages/shift-management";
+import LeaveManagement from "@/pages/leave-management";
+import AttendanceTracking from "@/pages/attendance-tracking";
+import QRControl from "@/pages/qr-control";
+import Reports from "@/pages/reports";
+import SystemSettings from "@/pages/system-settings";
 
 function Router() {
   return (
@@ -20,6 +25,11 @@ function Router() {
       <ProtectedRoute path="/personnel" component={PersonnelManagement} />
       <ProtectedRoute path="/branches" component={BranchManagement} />
       <ProtectedRoute path="/shifts" component={ShiftManagement} />
+      <ProtectedRoute path="/leave" component={LeaveManagement} />
+      <ProtectedRoute path="/attendance" component={AttendanceTracking} />
+      <ProtectedRoute path="/qr-control" component={QRControl} />
+      <ProtectedRoute path="/reports" component={Reports} />
+      <ProtectedRoute path="/settings" component={SystemSettings} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

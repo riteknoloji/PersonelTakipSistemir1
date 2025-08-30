@@ -37,7 +37,10 @@ export interface IStorage {
   // Attendance
   getTodayAttendance(): Promise<Attendance[]>;
   getAttendanceByPersonnel(personnelId: string, startDate?: Date, endDate?: Date): Promise<Attendance[]>;
+  getAttendanceByPersonnelAndDate(personnelId: string, date: string): Promise<Attendance | undefined>;
+  getAttendanceByDate(date: string): Promise<Attendance[]>;
   createAttendance(attendance: Partial<Attendance>): Promise<Attendance>;
+  updateAttendance(id: string, updates: Partial<Attendance>): Promise<Attendance | undefined>;
   
   // Leave Requests
   getLeaveRequests(): Promise<LeaveRequest[]>;
@@ -52,6 +55,10 @@ export interface IStorage {
     onLeave: number;
     activeShifts: number;
   }>;
+  
+  // System Settings
+  getSystemSettings(): Promise<any>;
+  updateSystemSettings(settings: any): Promise<any>;
   
   sessionStore: session.Store;
 }
@@ -263,6 +270,42 @@ export class DatabaseStorage implements IStorage {
       .where(eq(leaveRequests.id, id))
       .returning();
     return request || undefined;
+  }
+
+  async getAttendanceByPersonnelAndDate(personnelId: string, date: string): Promise<Attendance | undefined> {
+    const [record] = await db.select()
+      .from(attendance)
+      .where(and(
+        eq(attendance.personnelId, personnelId),
+        sql`DATE(${attendance.date}) = ${date}`
+      ));
+    return record || undefined;
+  }
+
+  async getAttendanceByDate(date: string): Promise<Attendance[]> {
+    return await db.select()
+      .from(attendance)
+      .where(sql`DATE(${attendance.date}) = ${date}`)
+      .orderBy(desc(attendance.checkInTime));
+  }
+
+  async updateAttendance(id: string, updates: Partial<Attendance>): Promise<Attendance | undefined> {
+    const [updated] = await db
+      .update(attendance)
+      .set(updates)
+      .where(eq(attendance.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getSystemSettings(): Promise<any> {
+    // Bu gelecekte ayrı bir tablo olabilir, şimdilik default değerler döndürüyoruz
+    return null;
+  }
+
+  async updateSystemSettings(settings: any): Promise<any> {
+    // Bu gelecekte ayrı bir tablo olabilir, şimdilik ayarları döndürüyoruz
+    return settings;
   }
 
   async getStats(): Promise<{

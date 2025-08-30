@@ -281,6 +281,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // QR Code Scanning
+  app.post("/api/qr-scan", requireAuth, async (req, res) => {
+    try {
+      const { qrCode } = req.body;
+      
+      if (!qrCode) {
+        return res.status(400).json({ message: "QR kod gerekli" });
+      }
+
+      // QR kodundan personel ID'sini çıkar (format: PERSONNEL_ID)
+      const personnelId = qrCode;
+      
+      // Personeli bul
+      const personnel = await storage.getPersonnelById(personnelId);
+      if (!personnel) {
+        return res.status(404).json({ message: "Geçersiz QR kod - Personel bulunamadı" });
+      }
+
+      // Bugünkü devam kaydını kontrol et
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const existingAttendance = await storage.getAttendanceByPersonnelAndDate(personnelId, todayStr);
+      
+      if (!existingAttendance) {
+        // Giriş kaydı oluştur
+        const attendanceData = {
+          personnelId,
+          date: today,
+          checkInTime: today,
+          checkOutTime: undefined,
+          notes: "QR kod ile giriş"
+        };
+        
+        await storage.createAttendance(attendanceData);
+        res.json({ 
+          message: `${personnel.firstName} ${personnel.lastName} başarıyla giriş yaptı`,
+          action: "check-in",
+          time: today.toLocaleTimeString('tr-TR')
+        });
+      } else if (existingAttendance.checkInTime && !existingAttendance.checkOutTime) {
+        // Çıkış kaydı oluştur
+        const updatedAttendance = {
+          ...existingAttendance,
+          checkOutTime: today
+        };
+        
+        await storage.updateAttendance(existingAttendance.id, updatedAttendance);
+        res.json({ 
+          message: `${personnel.firstName} ${personnel.lastName} başarıyla çıkış yaptı`,
+          action: "check-out",
+          time: today.toLocaleTimeString('tr-TR')
+        });
+      } else {
+        res.status(400).json({ message: "Personel zaten giriş ve çıkış kaydı tamamlamış" });
+      }
+    } catch (error) {
+      console.error("QR scan error:", error);
+      res.status(500).json({ message: "QR kod işlenirken hata oluştu" });
+    }
+  });
+
+  // Today's Attendance
+  app.get("/api/attendance/today", requireAuth, async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const attendance = await storage.getAttendanceByDate(today);
+      res.json(attendance);
+    } catch (error) {
+      res.status(500).json({ message: "Bugünkü devam kayıtları yüklenirken hata oluştu" });
+    }
+  });
+
+  // System Settings
+  app.get("/api/settings", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      res.json(settings || {
+        companyName: "",
+        companyAddress: "",
+        companyPhone: "",
+        companyEmail: "",
+        workHours: {
+          start: "09:00",
+          end: "18:00",
+          lunchBreak: 60,
+        },
+        notifications: {
+          emailEnabled: true,
+          smsEnabled: true,
+          lateArrivalAlert: true,
+          absenceAlert: true,
+        },
+        attendance: {
+          graceMinutes: 15,
+          autoClockOut: false,
+          requireLocationCheck: false,
+        },
+        backup: {
+          autoBackup: true,
+          backupFrequency: "daily",
+          retentionDays: 30,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Sistem ayarları yüklenirken hata oluştu" });
+    }
+  });
+
+  app.put("/api/settings", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const settings = await storage.updateSystemSettings(req.body);
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Sistem ayarları güncellenirken hata oluştu" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
