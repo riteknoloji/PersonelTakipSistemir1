@@ -27,6 +27,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Middleware to check super admin role
+  const requireSuperAdmin = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Oturum açmanız gerekiyor" });
+    }
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: "Bu işlem için süper admin yetkiniz bulunmamaktadır" });
+    }
+    next();
+  };
+
   // Dashboard stats
   app.get("/api/stats", requireAuth, async (req, res) => {
     try {
@@ -310,8 +321,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const attendanceData = {
           personnelId,
           date: today,
-          checkInTime: today,
-          checkOutTime: undefined,
+          checkIn: today,
+          checkOut: null,
           notes: "QR kod ile giriş"
         };
         
@@ -321,11 +332,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: "check-in",
           time: today.toLocaleTimeString('tr-TR')
         });
-      } else if (existingAttendance.checkInTime && !existingAttendance.checkOutTime) {
+      } else if (existingAttendance.checkIn && !existingAttendance.checkOut) {
         // Çıkış kaydı oluştur
         const updatedAttendance = {
           ...existingAttendance,
-          checkOutTime: today
+          checkOut: today
         };
         
         await storage.updateAttendance(existingAttendance.id, updatedAttendance);
