@@ -98,11 +98,20 @@ export function PersonnelModal({ personnel, open, onOpenChange, mode }: Personne
         isActive: personnel.isActive,
       });
     } else if (mode === 'add') {
-      form.reset();
-      // Set default branch for branch admin
-      if (user?.role === 'branch_admin' && user.branchId) {
-        form.setValue('branchId', user.branchId);
-      }
+      form.reset({
+        employeeNumber: `EMP${Date.now()}`,
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+        nationalId: "",
+        position: "",
+        department: "",
+        branchId: user?.role === 'branch_admin' && user.branchId ? user.branchId : "",
+        startDate: new Date(),
+        salary: 0,
+        isActive: true,
+      });
     }
   }, [personnel, mode, form, user]);
 
